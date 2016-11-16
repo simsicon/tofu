@@ -16,8 +16,8 @@ flags.DEFINE_string(
 FLAGS = flags.FLAGS
 
 class Parser:
-    def __init__(self, batch_size, vocabulary_size, filepath):
-        self.filepath = filepath
+    def __init__(self, batch_size, vocabulary_size):
+        self.filepath = FLAGS.train_data
         self.cursor = 0
         self.batch_size = batch_size
         self.vocabulary_size = vocabulary_size
@@ -65,7 +65,7 @@ class Parser:
                         
         self.pairs_length = len(self.ingredient_pairs)
                 
-    def generate_batch(self):
+    def generate_ingredients_batch(self):
         next_cursor = (self.cursor + self.batch_size) % self.pairs_length
         if next_cursor < self.cursor:
             batch_pairs = self.ingredient_pairs[self.cursor:] + self.ingredient_pairs[:next_cursor]
@@ -80,14 +80,17 @@ class Parser:
             pdb.set_trace()
         self.cursor = next_cursor
         return batch_data, batch_labels
+    
+    def generate_recipes_batch(self):
+        pass
 
 class Ingredient2Vec:
-    def __init__(self, train_file):
+    def __init__(self):
         self.batch_size = 128
         self.vocabulary_size = 1000
         self.emb_dim = 256
         self.num_steps = 1000000
-        self.parser = Parser(self.batch_size, self.vocabulary_size, train_file)
+        self.parser = Parser(self.batch_size, self.vocabulary_size)
         self.build_graph()
     
     def build_graph(self):
@@ -120,6 +123,20 @@ class Ingredient2Vec:
                 norm = tf.sqrt(tf.reduce_sum(tf.square(embeddings), 1, keep_dims=True))
                 self.normalized_embeddings = embeddings / norm
                 
+    def restore(self):
+        ckpt_dir = "checkpoints/"
+        ckpt_filename = "bigrams2vec.ckpt"
+        
+        with tf.Session(graph=self.graph) as sess:
+            init_op = tf.initialize_all_variables()
+            sess.run(init_op)
+            ckpt = tf.train.get_checkpoint_state(ckpt_dir)
+            saver = tf.train.Saver()
+            if ckpt and ckpt.model_checkpoint_path:
+                saver.restore(sess, ckpt.model_checkpoint_path)
+
+        self.final_embeddings = self.normalized_embeddings.eval()
+            
     def train(self):
         ckpt_dir = "checkpoints/"
         ckpt_filename = "bigrams2vec.ckpt"
@@ -132,7 +149,7 @@ class Ingredient2Vec:
             def train_loop(start_at=0):
                 average_loss = 0
                 for step in range(start_at, self.num_steps, 1):
-                    batch_data, batch_labels = self.parser.generate_batch()
+                    batch_data, batch_labels = self.parser.generate_ingredients_batch()
                     feed_dict = {self.train_dataset : batch_data, self.train_labels : batch_labels}
                     _, _l, _lr = sess.run([self.optimizer, self.loss, self.learning_rate], feed_dict=feed_dict)
                     average_loss += _l
@@ -177,13 +194,18 @@ class Ingredient2Vec:
             pylab.scatter(x, y)
             pylab.annotate(label, xy=(x, y), xytext=(5, 2), textcoords='offset points', ha='right', va='bottom', fontproperties=fm)
         pylab.savefig('ingredients2vec.png')
+        
+class Recipe2Vec:
+    def __init__(self):
+        pass
+    
                         
 def main(_):
     if not FLAGS.train_data:
         print "--train_data must be specified."
         exit(-1)
 
-    i2v = Ingredient2Vec(FLAGS.train_data)
+    i2v = Ingredient2Vec()
     i2v.train()
     i2v.plot()
 
