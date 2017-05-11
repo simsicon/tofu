@@ -3,3 +3,5 @@ data/*
 !data/ingredients
 !data/recipes
 *.png
+*.pyc
+scrapy/data/
