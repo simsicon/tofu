@@ -20,4 +20,4 @@ The script `ingredients.py` turn ingredients and recipes into embedding vectors 
 ![ingredients2vec](ingredients2vec.png "ingredients2vec")
 ![recipes2vec](recipes2vec.png "recipes2vec")
 
-Then we use `Seq2Seq` model to take ingredients as input and recipes as output.
+Then we use `ingredients2recipes.py` which deployed a `Seq2Seq` model to take ingredients as input and recipes as output.
