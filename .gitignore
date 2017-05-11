@@ -1,3 +1,5 @@
 checkpoints/*
 data/*
+!data/ingredients
+!data/recipes
 *.png
